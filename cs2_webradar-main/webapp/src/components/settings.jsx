@@ -104,16 +104,6 @@ const SettingsButton = ({ settings, onSettingsChange }) => {
               </label>
 
               <label className="flex items-center justify-between cursor-pointer group">
-                <span className="text-slate-300 font-medium group-hover:text-slate-100 transition-colors">Audio Alerts (C4 Planted)</span>
-                <input
-                  type="checkbox"
-                  checked={settings.soundAlerts !== false}
-                  onChange={(e) => onSettingsChange({ ...settings, soundAlerts: e.target.checked })}
-                  className="w-4 h-4 rounded accent-sky-500 cursor-pointer"
-                />
-              </label>
-
-              <label className="flex items-center justify-between cursor-pointer group">
                 <span className="text-slate-300 font-medium group-hover:text-slate-100 transition-colors">Show Total Team HP Bar</span>
                 <input
                   type="checkbox"

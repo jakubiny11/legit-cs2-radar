@@ -23,7 +23,6 @@ const DEFAULT_SETTINGS = {
   showNames: true,
   showViewCones: true,
   showDeadPlayers: true,
-  soundAlerts: true,
   showTeamHp: true,
   theme: "cyberpunk",
 };
@@ -31,28 +30,6 @@ const DEFAULT_SETTINGS = {
 const loadSettings = () => {
   const savedSettings = localStorage.getItem("radarSettings");
   return savedSettings ? JSON.parse(savedSettings) : DEFAULT_SETTINGS;
-};
-
-// Web Audio API Synthesizer for C4 Alert Sound
-const playBeep = () => {
-  try {
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 note
-    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
-
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.3);
-  } catch (e) {
-    console.error("Audio API error", e);
-  }
 };
 
 // In-memory cache for map configuration data
@@ -66,7 +43,6 @@ const App = () => {
   const [settings, setSettings] = useState(loadSettings());
   const [isConnected, setIsConnected] = useState(false);
   const currentMapRef = useRef(null);
-  const wasPlantedRef = useRef(false);
 
   // Save settings to local storage
   useEffect(() => {
@@ -135,17 +111,6 @@ const App = () => {
         setLocalTeam(parsedData.m_local_team);
         setBombData(parsedData.m_bomb);
 
-        // Check C4 plant event for audio alert
-        const isPlanted = parsedData.m_bomb && parsedData.m_bomb.m_blow_time > 0 && !parsedData.m_bomb.m_is_defused;
-        if (isPlanted && !wasPlantedRef.current) {
-          wasPlantedRef.current = true;
-          if (settings.soundAlerts !== false) {
-            playBeep();
-          }
-        } else if (!isPlanted) {
-          wasPlantedRef.current = false;
-        }
-
         const map = parsedData.m_map;
         if (map && map !== "invalid" && map !== currentMapRef.current) {
           currentMapRef.current = map;
@@ -167,7 +132,7 @@ const App = () => {
     };
 
     fetchData();
-  }, [settings.soundAlerts]);
+  }, []);
 
   const tPlayers = playerArray.filter((p) => p.m_team === 2);
   const ctPlayers = playerArray.filter((p) => p.m_team === 3);
