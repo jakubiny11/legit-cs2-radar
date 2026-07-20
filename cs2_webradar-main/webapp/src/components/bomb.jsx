@@ -16,25 +16,27 @@ const Bomb = ({ bombData, mapData, radarImage, localTeam, settings }) => {
   };
 
   // Calculate bomb size based on settings
-  const baseSize = 1.5; // Base size in vw
-  const scaledSize = baseSize * settings.bombSize;
+  const baseSize = 1.6;
+  const scaledSize = baseSize * (settings.bombSize || 0.5);
+
+  const isPlanted = bombData.m_blow_time > 0 && !bombData.m_is_defused;
 
   return (
     <div
-      className={`absolute origin-center rounded-[100%] left-0 top-0`}
+      className={`absolute origin-center rounded-full left-0 top-0 pointer-events-none transition-transform duration-100 ${isPlanted ? "animate-bomb-pulse" : ""}`}
       ref={bombRef}
       style={{
         width: `${scaledSize}vw`,
         height: `${scaledSize}vw`,
         transform: `translate(${radarImageTranslation.x}px, ${radarImageTranslation.y}px)`,
-        backgroundColor: `${
-          (bombData.m_is_defused && `#50904c`) ||
-          (localTeam == teamEnum.counterTerrorist && `#6492b4`) ||
-          `#c90b0b`
-        }`,
+        backgroundColor: bombData.m_is_defused
+          ? "#10b981"
+          : isPlanted
+          ? "#ef4444"
+          : "#f59e0b",
         WebkitMask: `url('./assets/icons/c4_sml.png') no-repeat center / contain`,
-        opacity: `1`,
-        zIndex: `1`,
+        zIndex: 20,
+        boxShadow: isPlanted ? "0 0 15px #ef4444" : "0 0 8px #f59e0b",
       }}
     />
   );

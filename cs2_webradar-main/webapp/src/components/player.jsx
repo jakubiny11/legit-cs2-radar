@@ -1,7 +1,6 @@
 import { useRef, useState, useEffect } from "react";
 import { getRadarPosition, playerColors } from "../utilities/utilities";
 
-
 let playerRotations = [];
 const calculatePlayerRotation = (playerData) => {
   const playerViewAngle = 270 - playerData.m_eye_angle;
@@ -27,9 +26,9 @@ const Player = ({ playerData, mapData, radarImage, localTeam, settings }) => {
   const radarImageBounding = (radarImage !== undefined &&
     radarImage.getBoundingClientRect()) || { width: 0, height: 0 };
 
-  const scaledSize = 0.7 * settings.dotSize;
+  const scaledSize = 0.85 * (settings.dotSize || 1);
 
-  // Store the last known position when the player dies
+  // Store last known position when dead
   useEffect(() => {
     if (playerData.m_is_dead) {
       if (!lastKnownPosition) {
@@ -40,6 +39,10 @@ const Player = ({ playerData, mapData, radarImage, localTeam, settings }) => {
     }
   }, [playerData.m_is_dead, radarPosition, lastKnownPosition]);
 
+  if (playerData.m_is_dead && settings.showDeadPlayers === false) {
+    return null;
+  }
+
   const effectivePosition = playerData.m_is_dead ? lastKnownPosition || { x: 0, y: 0 } : radarPosition;
 
   const radarImageTranslation = {
@@ -47,39 +50,76 @@ const Player = ({ playerData, mapData, radarImage, localTeam, settings }) => {
     y: radarImageBounding.height * effectivePosition.y - playerBounding.height * 0.5,
   };
 
+  const isTeammate = playerData.m_team === localTeam;
+  const dotColor = isTeammate
+    ? playerColors[playerData.m_color] || "#38bdf8"
+    : "#ef4444";
+
   return (
     <div
-      className={`absolute origin-center rounded-[100%] left-0 top-0`}
+      className="absolute origin-center left-0 top-0 pointer-events-none"
       ref={playerRef}
       style={{
         width: `${scaledSize}vw`,
         height: `${scaledSize}vw`,
         transform: `translate(${radarImageTranslation.x}px, ${radarImageTranslation.y}px)`,
-        transition: `transform 100ms linear`,
-        zIndex: `${(playerData.m_is_dead && `0`) || `1`}`,
-        WebkitMask: `${(playerData.m_is_dead && `url('./assets/icons/icon-enemy-death_png.png') no-repeat center / contain`) || `none`}`,
+        transition: `transform 120ms cubic-bezier(0.16, 1, 0.3, 1)`,
+        zIndex: playerData.m_is_dead ? 1 : 10,
       }}
     >
-      {/* Rotating container for player elements */}
-      <div
-        style={{
-          transform: `rotate(${(playerData.m_is_dead && `0`) || playerRotation}deg)`,
-          width: `${scaledSize}vw`,
-          height: `${scaledSize}vw`,
-          transition: `transform 100ms linear`,
-          opacity: `${(playerData.m_is_dead && `0.8`) || (invalidPosition && `0`) || `1`}`,
-        }}
-      >
-        {/* Player dot */}
+      {/* View Cone (FOV Indicator) */}
+      {!playerData.m_is_dead && settings.showViewCones !== false && !invalidPosition && (
         <div
-          className={`w-full h-full rounded-[50%_50%_50%_0%] rotate-[315deg]`}
+          className="absolute left-1/2 top-1/2 pointer-events-none"
           style={{
-
-            backgroundColor: `${(playerData.m_team == localTeam && playerColors[playerData.m_color]) || `red`}`,
-            opacity: `${(playerData.m_is_dead && `0.8`) || (invalidPosition && `0`) || `1`}`,
+            transform: `translate(-50%, -100%) rotate(${playerRotation}deg)`,
+            transformOrigin: "bottom center",
+            width: `${scaledSize * 2.5}vw`,
+            height: `${scaledSize * 3}vw`,
+            background: `radial-gradient(ellipse at bottom, ${dotColor}44 0%, ${dotColor}00 70%)`,
+            clipPath: "polygon(50% 0%, 0% 100%, 100% 100%)",
+            transition: `transform 120ms cubic-bezier(0.16, 1, 0.3, 1)`,
           }}
         />
+      )}
+
+      {/* Rotating container for player directional dot */}
+      <div
+        style={{
+          transform: `rotate(${playerData.m_is_dead ? 0 : playerRotation}deg)`,
+          width: "100%",
+          height: "100%",
+          transition: `transform 120ms cubic-bezier(0.16, 1, 0.3, 1)`,
+          opacity: playerData.m_is_dead ? 0.6 : invalidPosition ? 0 : 1,
+        }}
+      >
+        {playerData.m_is_dead ? (
+          <div
+            className="w-full h-full rounded-full flex items-center justify-center bg-slate-900/80 border border-slate-600/60 shadow-md text-xs font-bold text-slate-400"
+            style={{
+              backgroundImage: `url('./assets/icons/icon-enemy-death_png.png')`,
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "center",
+              backgroundSize: "contain",
+            }}
+          />
+        ) : (
+          <div
+            className="w-full h-full rounded-[50%_50%_50%_0%] rotate-[315deg] shadow-lg border border-white/20 transition-colors"
+            style={{
+              backgroundColor: dotColor,
+              boxShadow: `0 0 10px ${dotColor}aa`,
+            }}
+          />
+        )}
       </div>
+
+      {/* Optional Player Name Badge */}
+      {settings.showNames !== false && !playerData.m_is_dead && !invalidPosition && playerData.m_name && (
+        <div className="absolute left-1/2 -bottom-5 transform -translate-x-1/2 whitespace-nowrap bg-slate-950/80 backdrop-blur-md px-1.5 py-0.5 rounded border border-slate-700/60 text-[9px] font-semibold text-slate-200 shadow-md">
+          {playerData.m_name}
+        </div>
+      )}
     </div>
   );
 };

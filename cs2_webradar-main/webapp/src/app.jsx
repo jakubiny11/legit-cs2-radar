@@ -19,7 +19,10 @@ const EFFECTIVE_IP = USE_LOCALHOST ? "localhost" : PUBLIC_IP.match(/[a-zA-Z]/) ?
 
 const DEFAULT_SETTINGS = {
   dotSize: 1,
-  bombSize: 0.5,
+  bombSize: 1,
+  showNames: true,
+  showViewCones: true,
+  showDeadPlayers: true,
 };
 
 const loadSettings = () => {
@@ -36,6 +39,7 @@ const App = () => {
   const [localTeam, setLocalTeam] = useState();
   const [bombData, setBombData] = useState();
   const [settings, setSettings] = useState(loadSettings());
+  const [isConnected, setIsConnected] = useState(false);
   const currentMapRef = useRef(null);
 
   // Save settings to local storage whenever they change
@@ -74,24 +78,27 @@ const App = () => {
       }
 
       connectionTimeout = setTimeout(() => {
-        webSocket.close();
+        webSocket?.close();
       }, CONNECTION_TIMEOUT);
 
       webSocket.onopen = async () => {
         clearTimeout(connectionTimeout);
+        setIsConnected(true);
         console.info("connected to the web socket");
       };
 
       webSocket.onclose = async () => {
         clearTimeout(connectionTimeout);
+        setIsConnected(false);
         console.error("disconnected from the web socket");
       };
 
       webSocket.onerror = async (error) => {
         clearTimeout(connectionTimeout);
+        setIsConnected(false);
         const msgEl = document.getElementsByClassName("radar_message")[0];
         if (msgEl) {
-          msgEl.textContent = `WebSocket connection to '${webSocketURL}' failed. Please check the IP address and try again`;
+          msgEl.textContent = `WebSocket connection to '${webSocketURL}' failed. Please check IP address and server state.`;
         }
         console.error(error);
       };
@@ -125,54 +132,100 @@ const App = () => {
     fetchData();
   }, []);
 
+  const tPlayers = playerArray.filter((p) => p.m_team === 2);
+  const ctPlayers = playerArray.filter((p) => p.m_team === 3);
+  const aliveT = tPlayers.filter((p) => !p.m_is_dead).length;
+  const aliveCT = ctPlayers.filter((p) => !p.m_is_dead).length;
+
+  const isC4Planted = bombData && bombData.m_blow_time > 0 && !bombData.m_is_defused;
+  const blowTimeLeft = bombData?.m_blow_time || 0;
+  const defuseTimeLeft = bombData?.m_defuse_time || 0;
+  const isDefusing = bombData?.m_is_defusing;
+  const canDefuseInTime = isDefusing && blowTimeLeft - defuseTimeLeft > 0;
+
   return (
-    <div className="w-screen h-screen flex flex-col"
+    <div
+      className="w-screen h-screen flex flex-col relative overflow-hidden bg-slate-950 text-slate-100"
       style={{
-        background: `radial-gradient(50% 50% at 50% 50%, rgba(20, 40, 55, 0.95) 0%, rgba(7, 20, 30, 0.95) 100%)`,
-        backdropFilter: `blur(7.5px)`,
+        background: `radial-gradient(60% 60% at 50% 50%, rgba(15, 23, 42, 0.9) 0%, rgba(2, 6, 23, 0.98) 100%)`,
+        backdropFilter: `blur(10px)`,
       }}
     >
-      <div className={`w-full h-full flex flex-col justify-center overflow-hidden relative`}>
-        <div className={`absolute right-2.5 top-2.5 z-50`}>
-          <SettingsButton settings={settings} onSettingsChange={setSettings} />
+      {/* Top Header HUD Bar */}
+      <header className="w-full glass-panel px-6 py-3 flex items-center justify-between z-40 border-b border-slate-800/60 shadow-lg">
+        {/* Left: Map Badge & Status */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 bg-slate-900/80 border border-slate-700/50 px-3 py-1.5 rounded-xl">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span className="font-bold text-sm tracking-wider uppercase text-slate-200">
+              {mapData?.name ? mapData.name.replace("de_", "").replace("cs_", "") : "CS2 RADAR"}
+            </span>
+          </div>
+          <div className="text-xs text-slate-400 font-medium hidden sm:block">
+            {isConnected ? (
+              <span className="text-emerald-400 flex items-center gap-1.5">
+                ● Live Feed
+              </span>
+            ) : (
+              <span className="text-amber-400">Waiting for connection...</span>
+            )}
+          </div>
         </div>
 
-        {bombData && bombData.m_blow_time > 0 && !bombData.m_is_defused && (
-          <div className={`absolute left-1/2 top-2 flex-col items-center gap-1 z-50`}>
-            <div className={`flex justify-center items-center gap-1`}>
+        {/* Center: C4 Bomb Widget */}
+        {isC4Planted && (
+          <div className="flex flex-col items-center justify-center bg-rose-950/80 border border-rose-700/60 px-5 py-1.5 rounded-2xl shadow-xl animate-pulse">
+            <div className="flex items-center gap-2">
               <MaskedIcon
-                path={`./assets/icons/c4_sml.png`}
-                height={32}
-                color={
-                  (bombData.m_is_defusing &&
-                    bombData.m_blow_time - bombData.m_defuse_time > 0 &&
-                    `bg-radar-green`) ||
-                  (bombData.m_blow_time - bombData.m_defuse_time < 0 &&
-                    `bg-radar-red`) ||
-                  `bg-radar-secondary`
-                }
+                path="./assets/icons/c4_sml.png"
+                height={22}
+                color={canDefuseInTime ? "bg-emerald-400" : isDefusing ? "bg-rose-500" : "bg-amber-400"}
               />
-              <span>{`${bombData.m_blow_time.toFixed(1)}s ${(bombData.m_is_defusing &&
-                `(${bombData.m_defuse_time.toFixed(1)}s)`) ||
-                ""
-                }`}</span>
+              <span className="font-mono font-extrabold text-lg tracking-wider text-slate-100">
+                {blowTimeLeft.toFixed(1)}s
+              </span>
+              {isDefusing && (
+                <span className={`text-xs font-mono font-bold ${canDefuseInTime ? "text-emerald-400" : "text-rose-400"}`}>
+                  ({defuseTimeLeft.toFixed(1)}s DEFUSE)
+                </span>
+              )}
+            </div>
+            {/* C4 Countdown Progress Bar */}
+            <div className="w-32 h-1 bg-rose-900/60 rounded-full mt-1 overflow-hidden border border-rose-800/40">
+              <div
+                className={`h-full transition-all duration-100 ${canDefuseInTime ? "bg-emerald-400" : "bg-rose-500"}`}
+                style={{ width: `${Math.max(0, Math.min(100, (blowTimeLeft / 40) * 100))}%` }}
+              />
             </div>
           </div>
         )}
 
-        <div className={`flex items-center justify-evenly`}>
-          <ul id="terrorist" className="lg:flex hidden flex-col gap-7 m-0 p-0">
-            {playerArray
-              .filter((player) => player.m_team == 2)
-              .map((player) => (
-                <PlayerCard
-                  right={false}
-                  key={player.m_idx}
-                  playerData={player}
-                />
-              ))}
-          </ul>
+        {/* Right: Team Scores & Settings */}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 bg-slate-900/80 border border-slate-700/50 px-3.5 py-1 rounded-xl text-xs font-bold font-mono">
+            <span className="text-amber-400">T: {aliveT}/{tPlayers.length}</span>
+            <span className="text-slate-600">|</span>
+            <span className="text-sky-400">CT: {aliveCT}/{ctPlayers.length}</span>
+          </div>
+          <SettingsButton settings={settings} onSettingsChange={setSettings} />
+        </div>
+      </header>
 
+      {/* Main Content Area */}
+      <div className="w-full h-full flex justify-between items-center px-6 py-4 relative overflow-hidden">
+        {/* Left Side: Terrorist Players */}
+        <ul id="terrorist" className="lg:flex hidden flex-col gap-3.5 z-30 max-h-[85vh] overflow-y-auto pr-2">
+          {tPlayers.map((player) => (
+            <PlayerCard
+              isOnRightSide={false}
+              key={player.m_idx}
+              playerData={player}
+            />
+          ))}
+        </ul>
+
+        {/* Center: Radar Canvas */}
+        <div className="flex-1 flex justify-center items-center h-full relative z-20">
           {(playerArray.length > 0 && mapData && (
             <Radar
               playerArray={playerArray}
@@ -183,29 +236,25 @@ const App = () => {
               settings={settings}
             />
           )) || (
-              <div id="radar" className={`relative overflow-hidden origin-center`}>
-                <h1 className="radar_message">
-                  Connected! Waiting for data from usermode
-                </h1>
-              </div>
-            )}
-
-          <ul
-            id="counterTerrorist"
-            className="lg:flex hidden flex-col gap-7 m-0 p-0"
-          >
-            {playerArray
-              .filter((player) => player.m_team == 3)
-              .map((player) => (
-                <PlayerCard
-                  right={true}
-                  key={player.m_idx}
-                  playerData={player}
-                  settings={settings}
-                />
-              ))}
-          </ul>
+            <div id="radar" className="glass-panel p-8 rounded-3xl flex flex-col items-center justify-center gap-3 shadow-2xl border border-slate-700/50">
+              <div className="w-10 h-10 border-4 border-sky-400 border-t-transparent rounded-full animate-spin"></div>
+              <h1 className="radar_message text-slate-300 font-medium text-sm text-center">
+                Waiting for data from game...
+              </h1>
+            </div>
+          )}
         </div>
+
+        {/* Right Side: Counter-Terrorist Players */}
+        <ul id="counterTerrorist" className="lg:flex hidden flex-col gap-3.5 z-30 max-h-[85vh] overflow-y-auto pl-2">
+          {ctPlayers.map((player) => (
+            <PlayerCard
+              isOnRightSide={true}
+              key={player.m_idx}
+              playerData={player}
+            />
+          ))}
+        </ul>
       </div>
     </div>
   );
