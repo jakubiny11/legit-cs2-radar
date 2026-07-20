@@ -42,6 +42,7 @@ const App = () => {
   const [bombData, setBombData] = useState();
   const [settings, setSettings] = useState(loadSettings());
   const [isConnected, setIsConnected] = useState(false);
+  const [selectedPlayerIdx, setSelectedPlayerIdx] = useState(null);
   const currentMapRef = useRef(null);
 
   // Save settings to local storage
@@ -133,6 +134,14 @@ const App = () => {
 
     fetchData();
   }, []);
+
+  const handleSelectPlayer = (idx) => {
+    if (selectedPlayerIdx === idx) {
+      setSelectedPlayerIdx(null); // Unselect if clicked again
+    } else {
+      setSelectedPlayerIdx(idx);
+    }
+  };
 
   const tPlayers = playerArray.filter((p) => p.m_team === 2);
   const ctPlayers = playerArray.filter((p) => p.m_team === 3);
@@ -248,6 +257,8 @@ const App = () => {
               isOnRightSide={false}
               key={player.m_idx}
               playerData={player}
+              isSelected={player.m_idx === selectedPlayerIdx}
+              onSelectPlayer={handleSelectPlayer}
             />
           ))}
         </ul>
@@ -262,6 +273,7 @@ const App = () => {
               localTeam={localTeam}
               bombData={bombData}
               settings={settings}
+              selectedPlayerIdx={selectedPlayerIdx}
             />
           )) || (
             <div id="radar" className="glass-panel p-8 rounded-3xl flex flex-col items-center justify-center gap-3 shadow-2xl border border-slate-700/50">
@@ -280,6 +292,8 @@ const App = () => {
               isOnRightSide={true}
               key={player.m_idx}
               playerData={player}
+              isSelected={player.m_idx === selectedPlayerIdx}
+              onSelectPlayer={handleSelectPlayer}
             />
           ))}
         </ul>

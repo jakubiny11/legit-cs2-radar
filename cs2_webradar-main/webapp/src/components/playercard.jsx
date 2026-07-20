@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import MaskedIcon from "./maskedicon";
 import { playerColors, teamEnum } from "../utilities/utilities";
 
-const PlayerCard = ({ playerData, isOnRightSide }) => {
+const PlayerCard = ({ playerData, isOnRightSide, isSelected, onSelectPlayer }) => {
   const [modelName, setModelName] = useState(playerData.m_model_name);
 
   useEffect(() => {
@@ -19,23 +19,31 @@ const PlayerCard = ({ playerData, isOnRightSide }) => {
 
   return (
     <li
+      onClick={() => onSelectPlayer && onSelectPlayer(playerData.m_idx)}
       style={{ opacity: playerData.m_is_dead ? 0.45 : 1 }}
-      className={`glass-card rounded-2xl p-3.5 flex ${isOnRightSide ? "flex-row-reverse" : "flex-row"} gap-4 items-center shadow-xl border border-slate-700/40 hover:border-slate-600/60 transition-all`}
+      className={`glass-card rounded-2xl p-3.5 flex ${isOnRightSide ? "flex-row-reverse" : "flex-row"} gap-4 items-center shadow-xl border cursor-pointer transition-all ${
+        isSelected
+          ? "border-sky-400 border-2 shadow-sky-500/40 bg-sky-950/40 scale-[1.02]"
+          : "border-slate-700/40 hover:border-slate-600/60"
+      }`}
     >
       {/* Avatar & Model Column */}
       <div className="flex flex-col items-center gap-1.5 min-w-[70px]">
         <div
           className="cursor-pointer group flex flex-col items-center"
-          onClick={() =>
-            playerData.m_steam_id &&
-            window.open(
-              `https://steamcommunity.com/profiles/${playerData.m_steam_id}`,
-              "_blank",
-              "noopener,noreferrer"
-            )
-          }
+          onClick={(e) => {
+            e.stopPropagation();
+            if (playerData.m_steam_id) {
+              window.open(
+                `https://steamcommunity.com/profiles/${playerData.m_steam_id}`,
+                "_blank",
+                "noopener,noreferrer"
+              );
+            }
+          }}
         >
-          <span className="text-xs font-semibold text-slate-100 group-hover:text-sky-300 transition-colors tracking-wide truncate max-w-[85px] text-center">
+          <span className="text-xs font-semibold text-slate-100 group-hover:text-sky-300 transition-colors tracking-wide truncate max-w-[85px] text-center flex items-center gap-1">
+            {isSelected && <span className="text-sky-400 font-bold">🎯</span>}
             {playerData.m_name || "Player"}
           </span>
           <div
