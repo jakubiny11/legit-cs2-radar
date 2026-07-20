@@ -1,0 +1,16 @@
+# Node dependencies
+node_modules/
+dist/
+build/
+
+# Visual Studio / C++ build output
+.vs/
+usermode/release/
+usermode/x64/
+usermode/Debug/
+vcpkg_installed/
+
+# OS / IDE files
+.DS_Store
+Thumbs.db
+*.user
