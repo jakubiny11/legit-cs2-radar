@@ -23,6 +23,9 @@ const DEFAULT_SETTINGS = {
   showNames: true,
   showViewCones: true,
   showDeadPlayers: true,
+  soundAlerts: true,
+  showTeamHp: true,
+  theme: "cyberpunk",
 };
 
 const loadSettings = () => {
@@ -30,7 +33,29 @@ const loadSettings = () => {
   return savedSettings ? JSON.parse(savedSettings) : DEFAULT_SETTINGS;
 };
 
-// In-memory cache for map configuration data to prevent repeating HTTP fetches
+// Web Audio API Synthesizer for C4 Alert Sound
+const playBeep = () => {
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 note
+    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.3);
+  } catch (e) {
+    console.error("Audio API error", e);
+  }
+};
+
+// In-memory cache for map configuration data
 const mapCache = {};
 
 const App = () => {
@@ -41,8 +66,9 @@ const App = () => {
   const [settings, setSettings] = useState(loadSettings());
   const [isConnected, setIsConnected] = useState(false);
   const currentMapRef = useRef(null);
+  const wasPlantedRef = useRef(false);
 
-  // Save settings to local storage whenever they change
+  // Save settings to local storage
   useEffect(() => {
     localStorage.setItem("radarSettings", JSON.stringify(settings));
   }, [settings]);
@@ -98,7 +124,7 @@ const App = () => {
         setIsConnected(false);
         const msgEl = document.getElementsByClassName("radar_message")[0];
         if (msgEl) {
-          msgEl.textContent = `WebSocket connection to '${webSocketURL}' failed. Please check IP address and server state.`;
+          msgEl.textContent = `WebSocket connection to '${webSocketURL}' failed. Check IP address & server.`;
         }
         console.error(error);
       };
@@ -108,6 +134,17 @@ const App = () => {
         setPlayerArray(parsedData.m_players || []);
         setLocalTeam(parsedData.m_local_team);
         setBombData(parsedData.m_bomb);
+
+        // Check C4 plant event for audio alert
+        const isPlanted = parsedData.m_bomb && parsedData.m_bomb.m_blow_time > 0 && !parsedData.m_bomb.m_is_defused;
+        if (isPlanted && !wasPlantedRef.current) {
+          wasPlantedRef.current = true;
+          if (settings.soundAlerts !== false) {
+            playBeep();
+          }
+        } else if (!isPlanted) {
+          wasPlantedRef.current = false;
+        }
 
         const map = parsedData.m_map;
         if (map && map !== "invalid" && map !== currentMapRef.current) {
@@ -130,12 +167,16 @@ const App = () => {
     };
 
     fetchData();
-  }, []);
+  }, [settings.soundAlerts]);
 
   const tPlayers = playerArray.filter((p) => p.m_team === 2);
   const ctPlayers = playerArray.filter((p) => p.m_team === 3);
   const aliveT = tPlayers.filter((p) => !p.m_is_dead).length;
   const aliveCT = ctPlayers.filter((p) => !p.m_is_dead).length;
+
+  const sumTHp = tPlayers.reduce((acc, p) => acc + (p.m_is_dead ? 0 : (p.m_health || 0)), 0);
+  const sumCtHp = ctPlayers.reduce((acc, p) => acc + (p.m_is_dead ? 0 : (p.m_health || 0)), 0);
+  const maxTeamHp = 500; // 5 players * 100 HP
 
   const isC4Planted = bombData && bombData.m_blow_time > 0 && !bombData.m_is_defused;
   const blowTimeLeft = bombData?.m_blow_time || 0;
@@ -143,38 +184,40 @@ const App = () => {
   const isDefusing = bombData?.m_is_defusing;
   const canDefuseInTime = isDefusing && blowTimeLeft - defuseTimeLeft > 0;
 
+  const currentTheme = settings.theme || "cyberpunk";
+
   return (
     <div
-      className="w-screen h-screen flex flex-col relative overflow-hidden bg-slate-950 text-slate-100"
+      className={`w-screen h-screen flex flex-col relative overflow-hidden theme-${currentTheme}`}
       style={{
-        background: `radial-gradient(60% 60% at 50% 50%, rgba(15, 23, 42, 0.9) 0%, rgba(2, 6, 23, 0.98) 100%)`,
+        background: `var(--bg-gradient, radial-gradient(60% 60% at 50% 50%, rgba(15, 23, 42, 0.9) 0%, rgba(2, 6, 23, 0.98) 100%))`,
         backdropFilter: `blur(10px)`,
       }}
     >
       {/* Top Header HUD Bar */}
-      <header className="w-full glass-panel px-6 py-3 flex items-center justify-between z-40 border-b border-slate-800/60 shadow-lg">
-        {/* Left: Map Badge & Status */}
+      <header className="w-full glass-panel px-6 py-2.5 flex items-center justify-between z-40 border-b border-slate-800/60 shadow-lg">
+        {/* Left: Map Badge & Live Indicator */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-slate-900/80 border border-slate-700/50 px-3 py-1.5 rounded-xl">
+          <div className="flex items-center gap-2 bg-slate-900/80 border border-slate-700/50 px-3 py-1.5 rounded-xl shadow-inner">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
             <span className="font-bold text-sm tracking-wider uppercase text-slate-200">
               {mapData?.name ? mapData.name.replace("de_", "").replace("cs_", "") : "CS2 RADAR"}
             </span>
           </div>
-          <div className="text-xs text-slate-400 font-medium hidden sm:block">
+          <div className="text-xs font-medium hidden sm:block">
             {isConnected ? (
-              <span className="text-emerald-400 flex items-center gap-1.5">
-                ● Live Feed
+              <span className="text-emerald-400 flex items-center gap-1.5 font-mono">
+                ● Live 60FPS Feed
               </span>
             ) : (
-              <span className="text-amber-400">Waiting for connection...</span>
+              <span className="text-amber-400 font-mono">Connecting...</span>
             )}
           </div>
         </div>
 
-        {/* Center: C4 Bomb Widget */}
-        {isC4Planted && (
-          <div className="flex flex-col items-center justify-center bg-rose-950/80 border border-rose-700/60 px-5 py-1.5 rounded-2xl shadow-xl animate-pulse">
+        {/* Center: C4 Bomb Widget OR Team Total HP Comparison Bar */}
+        {isC4Planted ? (
+          <div className="flex flex-col items-center justify-center bg-rose-950/80 border border-rose-700/60 px-5 py-1 rounded-2xl shadow-xl animate-pulse">
             <div className="flex items-center gap-2">
               <MaskedIcon
                 path="./assets/icons/c4_sml.png"
@@ -190,17 +233,37 @@ const App = () => {
                 </span>
               )}
             </div>
-            {/* C4 Countdown Progress Bar */}
-            <div className="w-32 h-1 bg-rose-900/60 rounded-full mt-1 overflow-hidden border border-rose-800/40">
+            {/* C4 Countdown Bar */}
+            <div className="w-36 h-1 bg-rose-900/60 rounded-full mt-1 overflow-hidden border border-rose-800/40">
               <div
                 className={`h-full transition-all duration-100 ${canDefuseInTime ? "bg-emerald-400" : "bg-rose-500"}`}
                 style={{ width: `${Math.max(0, Math.min(100, (blowTimeLeft / 40) * 100))}%` }}
               />
             </div>
           </div>
+        ) : (
+          settings.showTeamHp !== false && (
+            <div className="hidden md:flex flex-col items-center gap-1 min-w-[240px] bg-slate-900/70 border border-slate-700/40 px-4 py-1 rounded-2xl">
+              <div className="flex justify-between w-full text-[10px] font-mono font-bold">
+                <span className="text-amber-400">T Total HP: {sumTHp}</span>
+                <span className="text-sky-400">CT Total HP: {sumCtHp}</span>
+              </div>
+              <div className="w-full h-1.5 bg-slate-950 rounded-full overflow-hidden flex border border-slate-800">
+                <div
+                  className="h-full bg-gradient-to-r from-amber-500 to-yellow-400 transition-all duration-300"
+                  style={{ width: `${(sumTHp / maxTeamHp) * 100}%` }}
+                />
+                <div className="h-full bg-transparent flex-1" />
+                <div
+                  className="h-full bg-gradient-to-l from-sky-500 to-cyan-400 transition-all duration-300"
+                  style={{ width: `${(sumCtHp / maxTeamHp) * 100}%` }}
+                />
+              </div>
+            </div>
+          )
         )}
 
-        {/* Right: Team Scores & Settings */}
+        {/* Right: Team Scores & Settings Button */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3 bg-slate-900/80 border border-slate-700/50 px-3.5 py-1 rounded-xl text-xs font-bold font-mono">
             <span className="text-amber-400">T: {aliveT}/{tPlayers.length}</span>
@@ -212,9 +275,9 @@ const App = () => {
       </header>
 
       {/* Main Content Area */}
-      <div className="w-full h-full flex justify-between items-center px-6 py-4 relative overflow-hidden">
+      <div className="w-full h-full flex justify-between items-center px-6 py-3 relative overflow-hidden">
         {/* Left Side: Terrorist Players */}
-        <ul id="terrorist" className="lg:flex hidden flex-col gap-3.5 z-30 max-h-[85vh] overflow-y-auto pr-2">
+        <ul id="terrorist" className="lg:flex hidden flex-col gap-3 z-30 max-h-[85vh] overflow-y-auto pr-2">
           {tPlayers.map((player) => (
             <PlayerCard
               isOnRightSide={false}
@@ -224,7 +287,7 @@ const App = () => {
           ))}
         </ul>
 
-        {/* Center: Radar Canvas */}
+        {/* Center: Radar Canvas with Zoom/Pan */}
         <div className="flex-1 flex justify-center items-center h-full relative z-20">
           {(playerArray.length > 0 && mapData && (
             <Radar
@@ -246,7 +309,7 @@ const App = () => {
         </div>
 
         {/* Right Side: Counter-Terrorist Players */}
-        <ul id="counterTerrorist" className="lg:flex hidden flex-col gap-3.5 z-30 max-h-[85vh] overflow-y-auto pl-2">
+        <ul id="counterTerrorist" className="lg:flex hidden flex-col gap-3 z-30 max-h-[85vh] overflow-y-auto pl-2">
           {ctPlayers.map((player) => (
             <PlayerCard
               isOnRightSide={true}

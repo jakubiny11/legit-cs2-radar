@@ -14,6 +14,25 @@
   --accent-t: #f59e0b;
 }
 
+/* Custom Themes */
+.theme-cyberpunk {
+  --bg-gradient: radial-gradient(60% 60% at 50% 50%, rgba(15, 23, 42, 0.92) 0%, rgba(2, 6, 23, 0.98) 100%);
+  --panel-bg: rgba(15, 23, 42, 0.8);
+  --accent-color: #38bdf8;
+}
+
+.theme-midnight {
+  --bg-gradient: radial-gradient(60% 60% at 50% 50%, rgba(10, 10, 10, 0.95) 0%, rgba(0, 0, 0, 1) 100%);
+  --panel-bg: rgba(18, 18, 18, 0.85);
+  --accent-color: #a855f7;
+}
+
+.theme-esports {
+  --bg-gradient: radial-gradient(60% 60% at 50% 50%, rgba(24, 30, 42, 0.9) 0%, rgba(10, 14, 22, 0.98) 100%);
+  --panel-bg: rgba(24, 30, 42, 0.85);
+  --accent-color: #10b981;
+}
+
 * {
   outline-offset: 2px;
 }
@@ -32,7 +51,7 @@ body {
 
 /* Glassmorphism utilities */
 .glass-panel {
-  background: rgba(15, 23, 42, 0.75);
+  background: var(--panel-bg, rgba(15, 23, 42, 0.75));
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -59,7 +78,7 @@ body {
     box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.8);
   }
   70% {
-    box-shadow: 0 0 0 16px rgba(239, 68, 68, 0);
+    box-shadow: 0 0 0 18px rgba(239, 68, 68, 0);
   }
   100% {
     box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
@@ -68,20 +87,6 @@ body {
 
 .animate-bomb-pulse {
   animation: bombPulse 1.2s infinite;
-}
-
-/* FOV Cone styles */
-.fov-cone {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  border-left: 20px solid transparent;
-  border-right: 20px solid transparent;
-  border-top: 40px solid rgba(255, 255, 255, 0.15);
-  transform-origin: top center;
-  pointer-events: none;
 }
 
 /* Custom scrollbars */
