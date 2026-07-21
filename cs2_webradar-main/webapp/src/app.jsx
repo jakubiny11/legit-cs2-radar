@@ -42,7 +42,8 @@ const App = () => {
   const [bombData, setBombData] = useState();
   const [settings, setSettings] = useState(loadSettings());
   const [isConnected, setIsConnected] = useState(false);
-  const [selectedPlayerIdx, setSelectedPlayerIdx] = useState(null);
+  const [enlargedPlayerIdx, setEnlargedPlayerIdx] = useState(null);
+  const [followingPlayerIdx, setFollowingPlayerIdx] = useState(null);
   const currentMapRef = useRef(null);
 
   // Save settings to local storage
@@ -135,11 +136,22 @@ const App = () => {
     fetchData();
   }, []);
 
-  const handleSelectPlayer = (idx) => {
-    if (selectedPlayerIdx === idx) {
-      setSelectedPlayerIdx(null); // Unselect if clicked again
+  // Single click: enlarge player dot on radar
+  const handleSingleClickPlayer = (idx) => {
+    if (enlargedPlayerIdx === idx) {
+      setEnlargedPlayerIdx(null); // Unenlarge if clicked again
     } else {
-      setSelectedPlayerIdx(idx);
+      setEnlargedPlayerIdx(idx);
+    }
+  };
+
+  // Double click: follow & rotate radar with player
+  const handleDoubleClickPlayer = (idx) => {
+    if (followingPlayerIdx === idx) {
+      setFollowingPlayerIdx(null); // Stop following if double clicked again
+    } else {
+      setFollowingPlayerIdx(idx);
+      setEnlargedPlayerIdx(idx);
     }
   };
 
@@ -257,8 +269,10 @@ const App = () => {
               isOnRightSide={false}
               key={player.m_idx}
               playerData={player}
-              isSelected={player.m_idx === selectedPlayerIdx}
-              onSelectPlayer={handleSelectPlayer}
+              isEnlarged={player.m_idx === enlargedPlayerIdx}
+              isFollowing={player.m_idx === followingPlayerIdx}
+              onSingleClickPlayer={handleSingleClickPlayer}
+              onDoubleClickPlayer={handleDoubleClickPlayer}
             />
           ))}
         </ul>
@@ -273,7 +287,10 @@ const App = () => {
               localTeam={localTeam}
               bombData={bombData}
               settings={settings}
-              selectedPlayerIdx={selectedPlayerIdx}
+              enlargedPlayerIdx={enlargedPlayerIdx}
+              followingPlayerIdx={followingPlayerIdx}
+              onSingleClickPlayer={handleSingleClickPlayer}
+              onDoubleClickPlayer={handleDoubleClickPlayer}
             />
           )) || (
             <div id="radar" className="glass-panel p-8 rounded-3xl flex flex-col items-center justify-center gap-3 shadow-2xl border border-slate-700/50">
@@ -292,8 +309,10 @@ const App = () => {
               isOnRightSide={true}
               key={player.m_idx}
               playerData={player}
-              isSelected={player.m_idx === selectedPlayerIdx}
-              onSelectPlayer={handleSelectPlayer}
+              isEnlarged={player.m_idx === enlargedPlayerIdx}
+              isFollowing={player.m_idx === followingPlayerIdx}
+              onSingleClickPlayer={handleSingleClickPlayer}
+              onDoubleClickPlayer={handleDoubleClickPlayer}
             />
           ))}
         </ul>

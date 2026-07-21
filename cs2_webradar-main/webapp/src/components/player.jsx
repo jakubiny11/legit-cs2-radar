@@ -13,7 +13,17 @@ const calculatePlayerRotation = (playerData) => {
   return playerRotations[idx];
 };
 
-const Player = ({ playerData, mapData, radarImage, localTeam, settings }) => {
+const Player = ({
+  playerData,
+  mapData,
+  radarImage,
+  localTeam,
+  settings,
+  isEnlarged,
+  isFollowing,
+  onSingleClickPlayer,
+  onDoubleClickPlayer
+}) => {
   const [lastKnownPosition, setLastKnownPosition] = useState(null);
   const radarPosition = getRadarPosition(mapData, playerData.m_position) || { x: 0, y: 0 };
   const invalidPosition = radarPosition.x <= 0 && radarPosition.y <= 0;
@@ -26,7 +36,8 @@ const Player = ({ playerData, mapData, radarImage, localTeam, settings }) => {
   const radarImageBounding = (radarImage !== undefined &&
     radarImage.getBoundingClientRect()) || { width: 0, height: 0 };
 
-  const scaledSize = 0.85 * (settings.dotSize || 1);
+  const baseMultiplier = isEnlarged || isFollowing ? 1.65 : 0.85;
+  const scaledSize = baseMultiplier * (settings.dotSize || 1);
 
   // Store last known position when dead
   useEffect(() => {
@@ -57,14 +68,22 @@ const Player = ({ playerData, mapData, radarImage, localTeam, settings }) => {
 
   return (
     <div
-      className="absolute origin-center left-0 top-0 pointer-events-none"
+      className="absolute origin-center left-0 top-0 cursor-pointer"
       ref={playerRef}
+      onClick={(e) => {
+        e.stopPropagation();
+        onSingleClickPlayer && onSingleClickPlayer(playerData.m_idx);
+      }}
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        onDoubleClickPlayer && onDoubleClickPlayer(playerData.m_idx);
+      }}
       style={{
         width: `${scaledSize}vw`,
         height: `${scaledSize}vw`,
         transform: `translate(${radarImageTranslation.x}px, ${radarImageTranslation.y}px)`,
-        transition: `transform 120ms cubic-bezier(0.16, 1, 0.3, 1)`,
-        zIndex: playerData.m_is_dead ? 1 : 10,
+        transition: `transform 120ms cubic-bezier(0.16, 1, 0.3, 1), width 200ms ease, height 200ms ease`,
+        zIndex: isFollowing ? 30 : isEnlarged ? 25 : playerData.m_is_dead ? 1 : 10,
       }}
     >
       {/* View Cone (FOV Indicator) */}
@@ -74,9 +93,9 @@ const Player = ({ playerData, mapData, radarImage, localTeam, settings }) => {
           style={{
             transform: `translate(-50%, -100%) rotate(${playerRotation}deg)`,
             transformOrigin: "bottom center",
-            width: `${scaledSize * 2.5}vw`,
-            height: `${scaledSize * 3}vw`,
-            background: `radial-gradient(ellipse at bottom, ${dotColor}44 0%, ${dotColor}00 70%)`,
+            width: `${scaledSize * (isEnlarged ? 2 : 2.5)}vw`,
+            height: `${scaledSize * (isEnlarged ? 2.5 : 3)}vw`,
+            background: `radial-gradient(ellipse at bottom, ${dotColor}66 0%, ${dotColor}00 70%)`,
             clipPath: "polygon(50% 0%, 0% 100%, 100% 100%)",
             transition: `transform 120ms cubic-bezier(0.16, 1, 0.3, 1)`,
           }}
@@ -105,18 +124,32 @@ const Player = ({ playerData, mapData, radarImage, localTeam, settings }) => {
           />
         ) : (
           <div
-            className="w-full h-full rounded-[50%_50%_50%_0%] rotate-[315deg] shadow-lg border border-white/20 transition-colors"
+            className={`w-full h-full rounded-[50%_50%_50%_0%] rotate-[315deg] shadow-lg border transition-all ${
+              isFollowing
+                ? "border-sky-300 border-2 animate-pulse ring-4 ring-sky-400/40"
+                : isEnlarged
+                ? "border-amber-300 border-2 ring-4 ring-amber-400/40"
+                : "border-white/20"
+            }`}
             style={{
               backgroundColor: dotColor,
-              boxShadow: `0 0 10px ${dotColor}aa`,
+              boxShadow: isEnlarged || isFollowing
+                ? `0 0 16px ${dotColor}`
+                : `0 0 10px ${dotColor}aa`,
             }}
           />
         )}
       </div>
 
-      {/* Optional Player Name Badge */}
-      {settings.showNames !== false && !playerData.m_is_dead && !invalidPosition && playerData.m_name && (
-        <div className="absolute left-1/2 -bottom-5 transform -translate-x-1/2 whitespace-nowrap bg-slate-950/80 backdrop-blur-md px-1.5 py-0.5 rounded border border-slate-700/60 text-[9px] font-semibold text-slate-200 shadow-md">
+      {/* Player Name Badge */}
+      {(settings.showNames !== false || isEnlarged || isFollowing) && !playerData.m_is_dead && !invalidPosition && playerData.m_name && (
+        <div className={`absolute left-1/2 -bottom-5 transform -translate-x-1/2 whitespace-nowrap px-1.5 py-0.5 rounded border text-[9px] font-semibold shadow-md pointer-events-none ${
+          isFollowing
+            ? "bg-sky-950/90 border-sky-400 text-sky-200"
+            : isEnlarged
+            ? "bg-amber-950/90 border-amber-400 text-amber-200 font-bold text-[10px]"
+            : "bg-slate-950/80 border-slate-700/60 text-slate-200"
+        }`}>
           {playerData.m_name}
         </div>
       )}

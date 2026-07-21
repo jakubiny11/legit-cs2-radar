@@ -2,7 +2,14 @@ import { useState, useEffect } from "react";
 import MaskedIcon from "./maskedicon";
 import { playerColors, teamEnum } from "../utilities/utilities";
 
-const PlayerCard = ({ playerData, isOnRightSide, isSelected, onSelectPlayer }) => {
+const PlayerCard = ({
+  playerData,
+  isOnRightSide,
+  isEnlarged,
+  isFollowing,
+  onSingleClickPlayer,
+  onDoubleClickPlayer
+}) => {
   const [modelName, setModelName] = useState(playerData.m_model_name);
 
   useEffect(() => {
@@ -19,11 +26,14 @@ const PlayerCard = ({ playerData, isOnRightSide, isSelected, onSelectPlayer }) =
 
   return (
     <li
-      onClick={() => onSelectPlayer && onSelectPlayer(playerData.m_idx)}
+      onClick={() => onSingleClickPlayer && onSingleClickPlayer(playerData.m_idx)}
+      onDoubleClick={() => onDoubleClickPlayer && onDoubleClickPlayer(playerData.m_idx)}
       style={{ opacity: playerData.m_is_dead ? 0.45 : 1 }}
       className={`glass-card rounded-2xl p-3.5 flex ${isOnRightSide ? "flex-row-reverse" : "flex-row"} gap-4 items-center shadow-xl border cursor-pointer transition-all ${
-        isSelected
-          ? "border-sky-400 border-2 shadow-sky-500/40 bg-sky-950/40 scale-[1.02]"
+        isFollowing
+          ? "border-sky-400 border-2 shadow-sky-500/50 bg-sky-950/50 scale-[1.03]"
+          : isEnlarged
+          ? "border-amber-400 border-2 shadow-amber-500/30 bg-amber-950/30 scale-[1.01]"
           : "border-slate-700/40 hover:border-slate-600/60"
       }`}
     >
@@ -43,7 +53,7 @@ const PlayerCard = ({ playerData, isOnRightSide, isSelected, onSelectPlayer }) =
           }}
         >
           <span className="text-xs font-semibold text-slate-100 group-hover:text-sky-300 transition-colors tracking-wide truncate max-w-[85px] text-center flex items-center gap-1">
-            {isSelected && <span className="text-sky-400 font-bold">🎯</span>}
+            {isFollowing ? <span className="text-sky-400 font-bold">🎥</span> : isEnlarged ? <span className="text-amber-400 font-bold">🔍</span> : null}
             {playerData.m_name || "Player"}
           </span>
           <div

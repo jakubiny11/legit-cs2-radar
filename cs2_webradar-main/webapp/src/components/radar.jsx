@@ -1,7 +1,6 @@
 import { useRef, useState } from "react";
 import Player from "./player";
 import Bomb from "./bomb";
-import { getRadarPosition } from "../utilities/utilities";
 
 const Radar = ({
   playerArray,
@@ -10,7 +9,10 @@ const Radar = ({
   localTeam,
   bombData,
   settings,
-  selectedPlayerIdx,
+  enlargedPlayerIdx,
+  followingPlayerIdx,
+  onSingleClickPlayer,
+  onDoubleClickPlayer,
 }) => {
   const radarImageRef = useRef();
   const containerRef = useRef();
@@ -62,15 +64,15 @@ const Radar = ({
 
   const handleMouseUp = () => setIsDragging(false);
 
-  // Find selected player object
-  const selectedPlayer = selectedPlayerIdx !== null
-    ? playerArray.find((p) => p.m_idx === selectedPlayerIdx)
+  // Find following player object
+  const followingPlayer = followingPlayerIdx !== null
+    ? playerArray.find((p) => p.m_idx === followingPlayerIdx)
     : null;
 
-  // Calculate rotation angle & map centering if player selected
+  // Calculate rotation angle if following
   let mapRotationDeg = 0;
-  if (selectedPlayer && !selectedPlayer.m_is_dead && rotateWithPlayer) {
-    const playerViewAngle = 270 - (selectedPlayer.m_eye_angle || 0);
+  if (followingPlayer && !followingPlayer.m_is_dead && rotateWithPlayer) {
+    const playerViewAngle = 270 - (followingPlayer.m_eye_angle || 0);
     mapRotationDeg = -playerViewAngle;
   }
 
@@ -116,7 +118,7 @@ const Radar = ({
           ⛶
         </button>
 
-        {selectedPlayer && (
+        {followingPlayer && (
           <button
             onClick={() => setRotateWithPlayer(!rotateWithPlayer)}
             title="Toggle Map Rotation with Player"
@@ -136,15 +138,21 @@ const Radar = ({
       </div>
 
       {/* Selected Player HUD Badge Banner */}
-      {selectedPlayer && (
+      {followingPlayer ? (
         <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 z-50 glass-panel px-4 py-1.5 rounded-full border border-sky-500/50 shadow-xl flex items-center gap-2 text-xs font-semibold text-slate-100 animate-pulse">
           <span className="w-2 h-2 rounded-full bg-sky-400"></span>
-          <span>Focused: <strong className="text-sky-300">{selectedPlayer.m_name}</strong></span>
-          <span className="text-slate-400 text-[10px] font-mono">({Math.round(selectedPlayer.m_eye_angle || 0)}°)</span>
+          <span>Following: <strong className="text-sky-300">{followingPlayer.m_name}</strong></span>
+          <span className="text-slate-400 text-[10px] font-mono">({Math.round(followingPlayer.m_eye_angle || 0)}°)</span>
         </div>
-      )}
+      ) : enlargedPlayerIdx !== null ? (
+        <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 z-50 glass-panel px-4 py-1.5 rounded-full border border-amber-500/50 shadow-xl flex items-center gap-2 text-xs font-semibold text-slate-100">
+          <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+          <span>Enlarged: <strong className="text-amber-300">{playerArray.find(p => p.m_idx === enlargedPlayerIdx)?.m_name || "Player"}</strong></span>
+          <span className="text-slate-400 text-[10px]">(Double-click to follow)</span>
+        </div>
+      ) : null}
 
-      {/* Radar Map & Entities Layer with Dynamic Rotation */}
+      {/* Radar Map & Entities Layer */}
       <div
         style={{
           transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel}) rotate(${mapRotationDeg}deg)`,
@@ -167,7 +175,10 @@ const Radar = ({
             radarImage={radarImageRef.current}
             localTeam={localTeam}
             settings={settings}
-            isSelected={player.m_idx === selectedPlayerIdx}
+            isEnlarged={player.m_idx === enlargedPlayerIdx}
+            isFollowing={player.m_idx === followingPlayerIdx}
+            onSingleClickPlayer={onSingleClickPlayer}
+            onDoubleClickPlayer={onDoubleClickPlayer}
           />
         ))}
 
