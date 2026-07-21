@@ -3,12 +3,15 @@ import { getRadarPosition, playerColors } from "../utilities/utilities";
 
 let playerRotations = [];
 const calculatePlayerRotation = (playerData) => {
-  const playerViewAngle = 270 - playerData.m_eye_angle;
+  // CS2 yaw angle: 90 = North (Up), 0 = East (Right), -90 = South (Down), 180/-180 = West (Left)
+  // Teardrop dot at 0 deg rotation points UP (North).
+  // Therefore: playerRotation = 90 - m_eye_angle
+  const targetAngle = 90 - (playerData.m_eye_angle || 0);
   const idx = playerData.m_idx;
 
   playerRotations[idx] = (playerRotations[idx] || 0) % 360;
   playerRotations[idx] +=
-    ((playerViewAngle - playerRotations[idx] + 540) % 360) - 180;
+    ((targetAngle - playerRotations[idx] + 540) % 360) - 180;
 
   return playerRotations[idx];
 };

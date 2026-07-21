@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import Player from "./player";
 import Bomb from "./bomb";
+import { getRadarPosition } from "../utilities/utilities";
 
 const Radar = ({
   playerArray,
@@ -69,17 +70,44 @@ const Radar = ({
     ? playerArray.find((p) => p.m_idx === followingPlayerIdx)
     : null;
 
-  // Calculate rotation angle if following
+  // Exact math for map rotation & auto-centering when following a player
   let mapRotationDeg = 0;
+  let activePanX = panOffset.x;
+  let activePanY = panOffset.y;
+
   if (followingPlayer && !followingPlayer.m_is_dead && rotateWithPlayer) {
-    const playerViewAngle = 270 - (followingPlayer.m_eye_angle || 0);
-    mapRotationDeg = -playerViewAngle;
+    // 1. Calculate map rotation so followed player view angle (eye_angle) faces straight UP (0 deg)
+    // In CS2: eye_angle = 90 (North/Up), 0 (East/Right), -90 (South/Down), 180 (West/Left)
+    // To turn eye_angle into UP (North), we rotate map by (eye_angle - 90) deg
+    mapRotationDeg = (followingPlayer.m_eye_angle || 0) - 90;
+
+    // 2. Auto-center radar view around the followed player position if user is not actively dragging
+    if (!isDragging && mapData && radarImageRef.current && containerRef.current) {
+      const playerPos = getRadarPosition(mapData, followingPlayer.m_position);
+      if (playerPos && playerPos.x > 0 && playerPos.y > 0) {
+        const radarW = radarImageRef.current.clientWidth || 0;
+        const radarH = radarImageRef.current.clientHeight || 0;
+        const containerW = containerRef.current.clientWidth || 0;
+        const containerH = containerRef.current.clientHeight || 0;
+
+        if (radarW > 0 && containerW > 0) {
+          const playerPxX = radarW * playerPos.x;
+          const playerPxY = radarH * playerPos.y;
+          const centerContainerX = containerW / 2;
+          const centerContainerY = containerH / 2;
+
+          // Pan to bring player to exact center of container
+          activePanX = centerContainerX - playerPxX;
+          activePanY = centerContainerY - playerPxY;
+        }
+      }
+    }
   }
 
   return (
     <div
       ref={containerRef}
-      className="relative overflow-hidden origin-center select-none rounded-3xl shadow-2xl border border-slate-700/50 group"
+      className="relative overflow-hidden origin-center select-none rounded-3xl shadow-2xl border border-slate-700/50 group w-full h-full flex items-center justify-center"
       onWheel={handleWheel}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
@@ -155,7 +183,7 @@ const Radar = ({
       {/* Radar Map & Entities Layer */}
       <div
         style={{
-          transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel}) rotate(${mapRotationDeg}deg)`,
+          transform: `translate(${activePanX}px, ${activePanY}px) scale(${zoomLevel}) rotate(${mapRotationDeg}deg)`,
           transition: isDragging ? "none" : "transform 120ms cubic-bezier(0.16, 1, 0.3, 1)",
           transformOrigin: "center center",
         }}
