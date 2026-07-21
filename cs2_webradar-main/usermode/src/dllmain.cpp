@@ -8,6 +8,9 @@ bool main()
     INIT_STEP("interfaces", i::setup());
     INIT_STEP("schema", schema::setup());
 
+    // Lower process priority to BELOW_NORMAL so CS2 game process gets 100% CPU priority
+    SetPriorityClass(GetCurrentProcess(), BELOW_NORMAL_PRIORITY_CLASS);
+
     ix::initNetSystem();
     LOG_INFO("winsock initialization completed");
 
@@ -60,8 +63,9 @@ bool main()
         f::run();
         web_socket.send(f::m_data.dump());
 
-        // Update loop delay reduced to 16ms (~60 updates/sec) for Ultra-Smooth feed without lag
-        std::this_thread::sleep_for(std::chrono::milliseconds(16));
+        // Optimized update rate: 30ms (~33 updates/sec) with low CPU priority
+        // Maintains silky smooth radar movement while zero impact on game FPS
+        std::this_thread::sleep_for(std::chrono::milliseconds(30));
     }
 
     return true;
