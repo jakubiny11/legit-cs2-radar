@@ -89,17 +89,18 @@ const Player = ({
         zIndex: isFollowing ? 30 : isEnlarged ? 25 : playerData.m_is_dead ? 1 : 10,
       }}
     >
-      {/* View Cone (FOV Indicator) */}
+      {/* View Cone (Authentic 90-degree FOV Circular Sector Fan) */}
       {!playerData.m_is_dead && settings.showViewCones !== false && !invalidPosition && (
         <div
           className="absolute left-1/2 top-1/2 pointer-events-none"
           style={{
             transform: `translate(-50%, -100%) rotate(${playerRotation}deg)`,
             transformOrigin: "bottom center",
-            width: `${scaledSize * (isEnlarged ? 2 : 2.5)}vw`,
-            height: `${scaledSize * (isEnlarged ? 2.5 : 3)}vw`,
-            background: `radial-gradient(ellipse at bottom, ${dotColor}66 0%, ${dotColor}00 70%)`,
-            clipPath: "polygon(50% 0%, 0% 100%, 100% 100%)",
+            width: `${scaledSize * (isEnlarged ? 4.5 : 3.8)}vw`,
+            height: `${scaledSize * (isEnlarged ? 4.5 : 3.8)}vw`,
+            background: `conic-gradient(from 315deg at 50% 100%, transparent 0deg, ${dotColor}66 45deg, transparent 90deg)`,
+            WebkitMaskImage: `radial-gradient(circle at 50% 100%, black 0%, black 65%, transparent 100%)`,
+            maskImage: `radial-gradient(circle at 50% 100%, black 0%, black 65%, transparent 100%)`,
             transition: `transform 120ms cubic-bezier(0.16, 1, 0.3, 1)`,
           }}
         />
