@@ -3,9 +3,6 @@ import { getRadarPosition, playerColors } from "../utilities/utilities";
 
 let playerRotations = [];
 const calculatePlayerRotation = (playerData) => {
-  // CS2 yaw angle: 90 = North (Up), 0 = East (Right), -90 = South (Down), 180/-180 = West (Left)
-  // Teardrop dot at 0 deg rotation points UP (North).
-  // Therefore: playerRotation = 90 - m_eye_angle
   const targetAngle = 90 - (playerData.m_eye_angle || 0);
   const idx = playerData.m_idx;
 
@@ -34,8 +31,6 @@ const Player = ({
   const playerRef = useRef();
   const playerRotation = calculatePlayerRotation(playerData);
 
-  // Use untransformed layout clientWidth/clientHeight instead of getBoundingClientRect()
-  // to prevent bounding-box expansion when image is rotated by CSS.
   const radarW = (radarImage && (radarImage.clientWidth || radarImage.offsetWidth)) || 0;
   const radarH = (radarImage && (radarImage.clientHeight || radarImage.offsetHeight)) || 0;
   const playerW = (playerRef.current && (playerRef.current.clientWidth || playerRef.current.offsetWidth)) || 0;
@@ -43,6 +38,9 @@ const Player = ({
 
   const baseMultiplier = isEnlarged || isFollowing ? 1.65 : 0.85;
   const scaledSize = baseMultiplier * (settings.dotSize || 1);
+
+  // Dynamic CSS transition timing based on chosen refresh rate
+  const transitionMs = settings.refreshRate === "15" ? 66 : settings.refreshRate === "30" ? 33 : 16;
 
   // Store last known position when dead
   useEffect(() => {
@@ -87,7 +85,7 @@ const Player = ({
         width: `${scaledSize}vw`,
         height: `${scaledSize}vw`,
         transform: `translate(${radarImageTranslation.x}px, ${radarImageTranslation.y}px)`,
-        transition: `transform 120ms cubic-bezier(0.16, 1, 0.3, 1), width 200ms ease, height 200ms ease`,
+        transition: `transform ${transitionMs}ms linear, width 200ms ease, height 200ms ease`,
         zIndex: isFollowing ? 30 : isEnlarged ? 25 : playerData.m_is_dead ? 1 : 10,
       }}
     >
@@ -103,7 +101,7 @@ const Player = ({
             background: `conic-gradient(from 315deg at 50% 100%, transparent 0deg, ${dotColor}66 45deg, transparent 90deg)`,
             WebkitMaskImage: `radial-gradient(circle at 50% 100%, black 0%, black 65%, transparent 100%)`,
             maskImage: `radial-gradient(circle at 50% 100%, black 0%, black 65%, transparent 100%)`,
-            transition: `transform 120ms cubic-bezier(0.16, 1, 0.3, 1)`,
+            transition: `transform ${transitionMs}ms linear`,
           }}
         />
       )}
@@ -114,7 +112,7 @@ const Player = ({
           transform: `rotate(${playerData.m_is_dead ? 0 : playerRotation}deg)`,
           width: "100%",
           height: "100%",
-          transition: `transform 120ms cubic-bezier(0.16, 1, 0.3, 1)`,
+          transition: `transform ${transitionMs}ms linear`,
           opacity: playerData.m_is_dead ? 0.6 : invalidPosition ? 0 : 1,
         }}
       >

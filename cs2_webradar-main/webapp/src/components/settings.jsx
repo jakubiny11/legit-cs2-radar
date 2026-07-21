@@ -38,6 +38,20 @@ const SettingsButton = ({ settings, onSettingsChange }) => {
               </select>
             </div>
 
+            {/* Refresh Rate / Smoothing Mode Selector */}
+            <div>
+              <label className="block text-slate-300 font-medium mb-1.5">Movement Smoothing (FPS)</label>
+              <select
+                value={settings.refreshRate || "60"}
+                onChange={(e) => onSettingsChange({ ...settings, refreshRate: e.target.value })}
+                className="w-full bg-slate-900 border border-slate-700/70 rounded-xl px-3 py-1.5 text-slate-200 focus:outline-none focus:border-sky-500 cursor-pointer font-medium"
+              >
+                <option value="60">⚡ 60 FPS (Ultra Smooth - 16ms)</option>
+                <option value="30">🎬 30 FPS (Balanced Smooth - 33ms)</option>
+                <option value="15">🐢 15 FPS (Eco Mode - 66ms)</option>
+              </select>
+            </div>
+
             {/* Sliders */}
             <div>
               <div className="flex justify-between items-center mb-1.5">

@@ -60,7 +60,8 @@ bool main()
         f::run();
         web_socket.send(f::m_data.dump());
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        // Update loop delay reduced to 16ms (~60 updates/sec) for Ultra-Smooth feed without lag
+        std::this_thread::sleep_for(std::chrono::milliseconds(16));
     }
 
     return true;
