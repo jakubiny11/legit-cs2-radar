@@ -127,7 +127,7 @@ const Player = ({
           />
         ) : (
           <div
-            className={`w-full h-full rounded-[50%_50%_50%_0%] rotate-[315deg] shadow-lg border transition-all ${
+            className={`w-full h-full rounded-[50%_50%_50%_0%] rotate-[135deg] shadow-lg border transition-all ${
               isFollowing
                 ? "border-sky-300 border-2 animate-pulse ring-4 ring-sky-400/40"
                 : isEnlarged
