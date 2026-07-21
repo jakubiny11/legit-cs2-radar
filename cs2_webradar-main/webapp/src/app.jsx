@@ -24,6 +24,7 @@ const DEFAULT_SETTINGS = {
   showViewCones: true,
   showDeadPlayers: true,
   showTeamHp: true,
+  refreshRate: "60",
   theme: "cyberpunk",
 };
 
@@ -45,6 +46,7 @@ const App = () => {
   const [enlargedPlayerIdx, setEnlargedPlayerIdx] = useState(null);
   const [followingPlayerIdx, setFollowingPlayerIdx] = useState(null);
   const currentMapRef = useRef(null);
+  const lastUpdateMsRef = useRef(0);
 
   // Save settings to local storage
   useEffect(() => {
@@ -108,6 +110,14 @@ const App = () => {
       };
 
       webSocket.onmessage = async (event) => {
+        // Enforce state update throttling according to selected refresh rate
+        const now = Date.now();
+        const minIntervalMs = settings.refreshRate === "15" ? 66 : settings.refreshRate === "30" ? 33 : 0;
+        if (now - lastUpdateMsRef.current < minIntervalMs) {
+          return; // Skip rendering frame if coming faster than target FPS limit
+        }
+        lastUpdateMsRef.current = now;
+
         const parsedData = JSON.parse(await event.data.text());
         setPlayerArray(parsedData.m_players || []);
         setLocalTeam(parsedData.m_local_team);
@@ -134,7 +144,7 @@ const App = () => {
     };
 
     fetchData();
-  }, []);
+  }, [settings.refreshRate]);
 
   // Single click: enlarge player dot on radar
   const handleSingleClickPlayer = (idx) => {
@@ -193,7 +203,7 @@ const App = () => {
           <div className="text-xs font-medium hidden sm:block">
             {isConnected ? (
               <span className="text-emerald-400 flex items-center gap-1.5 font-mono">
-                ● Live 60FPS Feed
+                ● Live ({settings.refreshRate || 60} FPS)
               </span>
             ) : (
               <span className="text-amber-400 font-mono">Connecting...</span>
