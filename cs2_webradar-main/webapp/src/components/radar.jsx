@@ -70,21 +70,22 @@ const Radar = ({
     ? playerArray.find((p) => p.m_idx === followingPlayerIdx)
     : null;
 
-  // Exact math for map rotation & auto-centering when following a player
+  // Calculate rotation angle & centering point
   let mapRotationDeg = 0;
   let activePanX = panOffset.x;
   let activePanY = panOffset.y;
+  let transformOriginStr = "center center";
 
   if (followingPlayer && !followingPlayer.m_is_dead && rotateWithPlayer) {
-    // 1. Calculate map rotation so followed player view angle (eye_angle) faces straight UP (0 deg)
-    // In CS2: eye_angle = 90 (North/Up), 0 (East/Right), -90 (South/Down), 180 (West/Left)
-    // To turn eye_angle into UP (North), we rotate map by (eye_angle - 90) deg
     mapRotationDeg = (followingPlayer.m_eye_angle || 0) - 90;
 
-    // 2. Auto-center radar view around the followed player position if user is not actively dragging
     if (!isDragging && mapData && radarImageRef.current && containerRef.current) {
       const playerPos = getRadarPosition(mapData, followingPlayer.m_position);
       if (playerPos && playerPos.x > 0 && playerPos.y > 0) {
+        // Set transformOrigin exactly to the followed player's 2D percentage on the map image
+        // This ensures the map rotates mathematically centered ON the player, keeping player & wall alignment exact.
+        transformOriginStr = `${playerPos.x * 100}% ${playerPos.y * 100}%`;
+
         const radarW = radarImageRef.current.clientWidth || 0;
         const radarH = radarImageRef.current.clientHeight || 0;
         const containerW = containerRef.current.clientWidth || 0;
@@ -96,7 +97,6 @@ const Radar = ({
           const centerContainerX = containerW / 2;
           const centerContainerY = containerH / 2;
 
-          // Pan to bring player to exact center of container
           activePanX = centerContainerX - playerPxX;
           activePanY = centerContainerY - playerPxY;
         }
@@ -185,7 +185,7 @@ const Radar = ({
         style={{
           transform: `translate(${activePanX}px, ${activePanY}px) scale(${zoomLevel}) rotate(${mapRotationDeg}deg)`,
           transition: isDragging ? "none" : "transform 120ms cubic-bezier(0.16, 1, 0.3, 1)",
-          transformOrigin: "center center",
+          transformOrigin: transformOriginStr,
         }}
       >
         <img
