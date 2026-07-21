@@ -38,18 +38,22 @@ const SettingsButton = ({ settings, onSettingsChange }) => {
               </select>
             </div>
 
-            {/* Refresh Rate / Smoothing Mode Selector */}
+            {/* Refresh Rate & C++ CPU Load Selector */}
             <div>
-              <label className="block text-slate-300 font-medium mb-1.5">Movement Smoothing (FPS)</label>
+              <label className="block text-slate-300 font-medium mb-1.5">Performance & C++ Polling Rate</label>
               <select
-                value={settings.refreshRate || "60"}
+                value={settings.refreshRate || "30"}
                 onChange={(e) => onSettingsChange({ ...settings, refreshRate: e.target.value })}
                 className="w-full bg-slate-900 border border-slate-700/70 rounded-xl px-3 py-1.5 text-slate-200 focus:outline-none focus:border-sky-500 cursor-pointer font-medium"
               >
-                <option value="60">⚡ 60 FPS (Ultra Smooth - 16ms)</option>
-                <option value="30">🎬 30 FPS (Balanced Smooth - 33ms)</option>
-                <option value="15">🐢 15 FPS (Eco Mode - 66ms)</option>
+                <option value="60">⚡ 60 FPS / High Performance (16ms C++ Delay)</option>
+                <option value="30">⚖️ 30 FPS / Balanced (33ms C++ Delay - Recommended)</option>
+                <option value="20">🛡️ 20 FPS / Low CPU / Max Game FPS (50ms C++ Delay)</option>
+                <option value="15">🐢 15 FPS / Eco Mode (66ms C++ Delay)</option>
               </select>
+              <span className="text-[10px] text-slate-400 mt-1 block">
+                Zníženie obchádza vyťaženie CPU a garantuje plné FPS v hre CS2.
+              </span>
             </div>
 
             {/* Sliders */}

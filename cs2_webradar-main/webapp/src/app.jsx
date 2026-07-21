@@ -24,7 +24,7 @@ const DEFAULT_SETTINGS = {
   showViewCones: true,
   showDeadPlayers: true,
   showTeamHp: true,
-  refreshRate: "60",
+  refreshRate: "30",
   theme: "cyberpunk",
 };
 
@@ -47,10 +47,20 @@ const App = () => {
   const [followingPlayerIdx, setFollowingPlayerIdx] = useState(null);
   const currentMapRef = useRef(null);
   const lastUpdateMsRef = useRef(0);
+  const wsRef = useRef(null);
 
-  // Save settings to local storage
+  // Save settings to local storage & send C++ poll rate command over WebSocket
   useEffect(() => {
     localStorage.setItem("radarSettings", JSON.stringify(settings));
+
+    const delayMs = settings.refreshRate === "20" ? 50 : settings.refreshRate === "15" ? 66 : settings.refreshRate === "30" ? 33 : 16;
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      try {
+        wsRef.current.send(JSON.stringify({ delay_ms: delayMs }));
+      } catch (err) {
+        console.error("Failed to send rate command", err);
+      }
+    }
   }, [settings]);
 
   useEffect(() => {
@@ -77,6 +87,7 @@ const App = () => {
 
           if (!webSocketURL) return;
           webSocket = new WebSocket(webSocketURL);
+          wsRef.current = webSocket;
         } catch (error) {
           const msgEl = document.getElementsByClassName("radar_message")[0];
           if (msgEl) msgEl.textContent = `${error}`;
@@ -91,6 +102,10 @@ const App = () => {
         clearTimeout(connectionTimeout);
         setIsConnected(true);
         console.info("connected to the web socket");
+
+        // Send initial target polling delay to C++ usermode upon connection
+        const delayMs = settings.refreshRate === "20" ? 50 : settings.refreshRate === "15" ? 66 : settings.refreshRate === "30" ? 33 : 16;
+        webSocket.send(JSON.stringify({ delay_ms: delayMs }));
       };
 
       webSocket.onclose = async () => {
@@ -110,14 +125,6 @@ const App = () => {
       };
 
       webSocket.onmessage = async (event) => {
-        // Enforce state update throttling according to selected refresh rate
-        const now = Date.now();
-        const minIntervalMs = settings.refreshRate === "15" ? 66 : settings.refreshRate === "30" ? 33 : 0;
-        if (now - lastUpdateMsRef.current < minIntervalMs) {
-          return; // Skip rendering frame if coming faster than target FPS limit
-        }
-        lastUpdateMsRef.current = now;
-
         const parsedData = JSON.parse(await event.data.text());
         setPlayerArray(parsedData.m_players || []);
         setLocalTeam(parsedData.m_local_team);
@@ -144,7 +151,7 @@ const App = () => {
     };
 
     fetchData();
-  }, [settings.refreshRate]);
+  }, []);
 
   // Single click: enlarge player dot on radar
   const handleSingleClickPlayer = (idx) => {
@@ -203,7 +210,7 @@ const App = () => {
           <div className="text-xs font-medium hidden sm:block">
             {isConnected ? (
               <span className="text-emerald-400 flex items-center gap-1.5 font-mono">
-                ● Live ({settings.refreshRate || 60} FPS)
+                ● Live ({settings.refreshRate || 30} FPS)
               </span>
             ) : (
               <span className="text-amber-400 font-mono">Connecting...</span>

@@ -1,4 +1,7 @@
 #include "pch.hpp"
+#include <atomic>
+
+static std::atomic<int> g_update_delay_ms{ 30 };
 
 bool main()
 {
@@ -34,6 +37,23 @@ bool main()
             handshake_cv.notify_one();
             LOG_INFO("connected to the web socket ('%s')", formatted_address.c_str());
         }
+        else if (msg->type == ix::WebSocketMessageType::Message)
+        {
+            try
+            {
+                auto parsed = nlohmann::json::parse(msg->str);
+                if (parsed.contains("delay_ms"))
+                {
+                    int new_delay = parsed["delay_ms"].get<int>();
+                    if (new_delay >= 5 && new_delay <= 200)
+                    {
+                        g_update_delay_ms.store(new_delay);
+                        LOG_INFO("dynamic update delay changed to %d ms", new_delay);
+                    }
+                }
+            }
+            catch (...) {}
+        }
         else if (msg->type == ix::WebSocketMessageType::Error)
         {
             {
@@ -63,9 +83,8 @@ bool main()
         f::run();
         web_socket.send(f::m_data.dump());
 
-        // Optimized update rate: 30ms (~33 updates/sec) with low CPU priority
-        // Maintains silky smooth radar movement while zero impact on game FPS
-        std::this_thread::sleep_for(std::chrono::milliseconds(30));
+        int current_delay = g_update_delay_ms.load();
+        std::this_thread::sleep_for(std::chrono::milliseconds(current_delay));
     }
 
     return true;
