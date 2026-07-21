@@ -5,14 +5,15 @@ const Bomb = ({ bombData, mapData, radarImage, localTeam, settings }) => {
   const radarPosition = getRadarPosition(mapData, bombData);
 
   const bombRef = useRef();
-  const bombBounding = (bombRef.current &&
-    bombRef.current.getBoundingClientRect()) || { width: 0, height: 0 };
 
-  const radarImageBounding = (radarImage !== undefined &&
-    radarImage.getBoundingClientRect()) || { width: 0, height: 0 };
+  const radarW = (radarImage && (radarImage.clientWidth || radarImage.offsetWidth)) || 0;
+  const radarH = (radarImage && (radarImage.clientHeight || radarImage.offsetHeight)) || 0;
+  const bombW = (bombRef.current && (bombRef.current.clientWidth || bombRef.current.offsetWidth)) || 0;
+  const bombH = (bombRef.current && (bombRef.current.clientHeight || bombRef.current.offsetHeight)) || 0;
+
   const radarImageTranslation = {
-    x: radarImageBounding.width * radarPosition.x - bombBounding.width * 0.5,
-    y: radarImageBounding.height * radarPosition.y - bombBounding.height * 0.5,
+    x: radarW * radarPosition.x - bombW * 0.5,
+    y: radarH * radarPosition.y - bombH * 0.5,
   };
 
   // Calculate bomb size based on settings

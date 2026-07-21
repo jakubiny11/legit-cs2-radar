@@ -32,12 +32,14 @@ const Player = ({
   const invalidPosition = radarPosition.x <= 0 && radarPosition.y <= 0;
 
   const playerRef = useRef();
-  const playerBounding = (playerRef.current &&
-    playerRef.current.getBoundingClientRect()) || { width: 0, height: 0 };
   const playerRotation = calculatePlayerRotation(playerData);
 
-  const radarImageBounding = (radarImage !== undefined &&
-    radarImage.getBoundingClientRect()) || { width: 0, height: 0 };
+  // Use untransformed layout clientWidth/clientHeight instead of getBoundingClientRect()
+  // to prevent bounding-box expansion when image is rotated by CSS.
+  const radarW = (radarImage && (radarImage.clientWidth || radarImage.offsetWidth)) || 0;
+  const radarH = (radarImage && (radarImage.clientHeight || radarImage.offsetHeight)) || 0;
+  const playerW = (playerRef.current && (playerRef.current.clientWidth || playerRef.current.offsetWidth)) || 0;
+  const playerH = (playerRef.current && (playerRef.current.clientHeight || playerRef.current.offsetHeight)) || 0;
 
   const baseMultiplier = isEnlarged || isFollowing ? 1.65 : 0.85;
   const scaledSize = baseMultiplier * (settings.dotSize || 1);
@@ -60,8 +62,8 @@ const Player = ({
   const effectivePosition = playerData.m_is_dead ? lastKnownPosition || { x: 0, y: 0 } : radarPosition;
 
   const radarImageTranslation = {
-    x: radarImageBounding.width * effectivePosition.x - playerBounding.width * 0.5,
-    y: radarImageBounding.height * effectivePosition.y - playerBounding.height * 0.5,
+    x: radarW * effectivePosition.x - playerW * 0.5,
+    y: radarH * effectivePosition.y - playerH * 0.5,
   };
 
   const isTeammate = playerData.m_team === localTeam;
